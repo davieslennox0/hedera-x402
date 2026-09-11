@@ -73,6 +73,7 @@ app.use((req, res, next) => {
         kind: typeof res.locals.kind === "string" ? res.locals.kind : undefined,
         headline: typeof res.locals.headline === "string" ? res.locals.headline : undefined,
         snippet: typeof res.locals.snippet === "string" ? res.locals.snippet : undefined,
+        content: typeof res.locals.content === "string" ? res.locals.content : undefined,
       });
     } catch (err) {
       console.error("Failed to decode PAYMENT-RESPONSE for activity log:", err);
@@ -195,6 +196,7 @@ if (process.env.GROQ_API_KEY) {
       const feedback = await groqComplete(TERM_PAPER_SYSTEM_PROMPT, text);
       res.locals.headline = `Review: ${text.slice(0, 40)}${text.length > 40 ? "…" : ""}`;
       res.locals.snippet = feedback.slice(0, 140);
+      res.locals.content = feedback;
       res.json({ kind: "term-paper", feedback, generatedAt: new Date().toISOString() });
     } catch (err) {
       const message = err instanceof GroqNotConfiguredError ? err.message : String(err);
@@ -214,6 +216,7 @@ if (process.env.GROQ_API_KEY) {
       const analysis = await groqComplete(NEWS_SYSTEM_PROMPT, topic);
       res.locals.headline = topic.charAt(0).toUpperCase() + topic.slice(1);
       res.locals.snippet = analysis.slice(0, 140);
+      res.locals.content = analysis;
       res.json({ kind: "news", topic, analysis, generatedAt: new Date().toISOString() });
     } catch (err) {
       const message = err instanceof GroqNotConfiguredError ? err.message : String(err);

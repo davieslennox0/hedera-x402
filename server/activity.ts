@@ -18,6 +18,10 @@ export type ActivityEntry = {
   // hook reads it. Absent for the older generic /paid/quote route.
   headline?: string;
   snippet?: string;
+  // Full generated deliverable text (feedback / analysis) — snippet is a
+  // truncated preview for the card face, content is the whole thing for
+  // "Read more". Same res.locals mechanism as headline/snippet.
+  content?: string;
 };
 
 const MAX_ENTRIES = 100;
