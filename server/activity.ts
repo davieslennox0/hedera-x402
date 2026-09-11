@@ -12,6 +12,12 @@ export type ActivityEntry = {
   // older generic /paid/quote route. Set via res.locals.kind by the route
   // handler before the settlement-observer middleware's `finish` hook reads it.
   kind?: string;
+  // Short title + content preview for the dashboard's card grid, set the
+  // same way as `kind` — via res.locals in the route handler that actually
+  // generated the deliverable, before the settlement-observer's `finish`
+  // hook reads it. Absent for the older generic /paid/quote route.
+  headline?: string;
+  snippet?: string;
 };
 
 const MAX_ENTRIES = 100;

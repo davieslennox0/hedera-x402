@@ -25,7 +25,7 @@
     margin: 0; background: var(--bg); color: var(--ink);
     font-family: -apple-system, "Segoe UI", Roboto, sans-serif; height: 100%;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 44px 28px 64px; }
+  .wrap { max-width: 1800px; margin: 0 auto; padding: 44px 28px 64px; }
 
   header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 12px; }
   .title-block h1 {
@@ -58,30 +58,44 @@
   .stat .value { font-family: var(--serif); font-weight: 500; font-size: 26px; margin-top: 6px; color: var(--ink); }
   .stat .value.accent { color: var(--sun); }
 
-  .table-scroll {
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px 14px 12px; display: flex; flex-direction: column; min-height: 168px;
   }
-  table { width: 100%; min-width: 640px; border-collapse: collapse; }
-  thead th {
-    text-align: left; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--ink-faint); font-weight: 500; padding: 12px 14px; border-bottom: 1px solid var(--border);
+  .card.new { animation: flash 1.3s ease-out; }
+  @keyframes flash { 0% { background: rgba(224,164,88,0.16); } 100% { background: var(--panel); } }
+  .card .kind {
+    font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-dim); border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px;
+    display: inline-block; align-self: flex-start; margin-bottom: 8px;
   }
-  tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--ink); }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr.new { animation: flash 1.3s ease-out; }
-  @keyframes flash { 0% { background: rgba(224,164,88,0.14); } 100% { background: transparent; } }
-  .tx { font-family: var(--mono); color: var(--ink-dim); text-decoration: none; font-size: 12.5px; }
-  .tx:hover { color: var(--sun); }
-  .amt { font-family: var(--mono); }
-  .kind {
-    font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--ink-dim); border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px;
-    display: inline-block;
+  .card .headline {
+    font-family: var(--serif); font-weight: 500; font-size: 14px; line-height: 1.3;
+    color: var(--ink); margin: 0 0 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--sun); }
-  .status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--sun); }
-  .empty { padding: 48px 14px; text-align: center; color: var(--ink-faint); font-size: 13px; font-family: var(--mono); }
+  .card .snippet {
+    font-size: 11.5px; line-height: 1.5; color: var(--ink-dim); margin: 0; flex: 1;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card .meta {
+    font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint);
+    margin-top: 8px;
+  }
+  .card .readmore {
+    margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; text-decoration: none;
+    border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px;
+    color: var(--ink);
+  }
+  .card .readmore:hover { border-color: var(--sun-dim); color: var(--sun); }
+  .card .readmore .price { color: var(--sun); font-weight: 600; }
+  .empty { grid-column: 1 / -1; padding: 60px 14px; text-align: center; color: var(--ink-faint); font-size: 13px; font-family: var(--mono); }
   footer { margin-top: 16px; font-size: 11px; color: var(--ink-faint); font-family: var(--mono); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   footer a { color: var(--ink-dim); }
   footer a:hover { color: var(--sun); }
@@ -92,6 +106,7 @@
     .stats { grid-template-columns: repeat(2, 1fr); }
     .stats .stat:last-child { grid-column: span 2; }
     .stat .value { font-size: 21px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
     footer { flex-direction: column; gap: 6px; }
   }
 </style>
@@ -112,14 +127,7 @@
       <div class="stat"><div class="label">Last settlement</div><div class="value" id="stat-last">&mdash;</div></div>
     </div>
 
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr><th>Time</th><th>Kind</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
+    <div class="grid" id="rows"></div>
 
     <footer>
       <span id="poll-status">polling /activity every 2.5s</span>
@@ -150,9 +158,23 @@
     return Math.round(s / 60) + "m ago";
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  // Guarantees a real preview even for entries recorded before headline/
+  // snippet existed (older /paid/quote settlements, or anything from before
+  // this deploy) — always at least 15 characters, per spec.
+  function fallbackSnippet(e) {
+    const base = `Settlement ${e.txId}`;
+    return base.length >= 15 ? base : base.padEnd(15, ".");
+  }
+
   function render(entries) {
     if (entries.length === 0) {
-      ROWS.innerHTML = '<tr><td class="empty" colspan="6">Waiting for the first settled payment&hellip;</td></tr>';
+      ROWS.innerHTML = '<div class="empty">Waiting for the first settled payment&hellip;</div>';
       STAT_COUNT.textContent = "0";
       STAT_VOLUME.textContent = "0 ℏ";
       STAT_LAST.textContent = "—";
@@ -163,18 +185,22 @@
     ROWS.innerHTML = "";
     for (const e of entries) {
       totalTinybars += BigInt(e.amountTinybars === "unknown" ? 0 : e.amountTinybars);
-      const tr = document.createElement("tr");
-      if (!knownTxIds.has(e.txId)) tr.className = "new";
-      tr.innerHTML = `
-        <td>${timeAgo(e.timestamp)}</td>
-        <td><span class="kind">${e.kind ?? "quote"}</span></td>
-        <td><a class="tx" target="_blank" rel="noopener"
-              href="https://hashscan.io/testnet/transaction/${encodeURIComponent(e.txId)}">${e.txId}</a></td>
-        <td class="amt">${tinybarsToHbar(e.amountTinybars)}</td>
-        <td class="amt">${e.buyer ?? "—"}</td>
-        <td><span class="status">settled</span></td>
+      const card = document.createElement("div");
+      card.className = knownTxIds.has(e.txId) ? "card" : "card new";
+      const headline = e.headline || (e.kind ? `${e.kind} settlement` : "Quote settlement");
+      const snippet = e.snippet || fallbackSnippet(e);
+      const hashscanUrl = `https://hashscan.io/testnet/transaction/${encodeURIComponent(e.txId)}`;
+      card.innerHTML = `
+        <span class="kind">${escapeHtml(e.kind ?? "quote")}</span>
+        <p class="headline">${escapeHtml(headline)}</p>
+        <p class="snippet">${escapeHtml(snippet)}</p>
+        <div class="meta">${timeAgo(e.timestamp)} &middot; ${escapeHtml(e.buyer ?? "—")}</div>
+        <a class="readmore" target="_blank" rel="noopener" href="${hashscanUrl}">
+          <span>Read more →</span>
+          <span class="price">${tinybarsToHbar(e.amountTinybars)}</span>
+        </a>
       `;
-      ROWS.appendChild(tr);
+      ROWS.appendChild(card);
     }
 
     knownTxIds = new Set(entries.map(e => e.txId));
