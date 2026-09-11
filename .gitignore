@@ -6,3 +6,7 @@ dist/
 *.key
 *.log
 .DS_Store
+activity.json
+output/
+test-results/
+playwright-report/

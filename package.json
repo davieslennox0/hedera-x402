@@ -8,7 +8,7 @@
     "server": "tsx server/index.ts",
     "client": "tsx client/index.ts",
     "generate-accounts": "tsx scripts/generate-accounts.ts",
-    "associate": "tsx scripts/associate-token.ts",
+    "record-demo": "xvfb-run -a node scripts/record-demo.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/express": "^5.0.1",
     "@types/node": "^22.13.4",
+    "playwright": "^1.63.0",
     "tsx": "^4.21.0",
     "typescript": "^5.7.3"
   }

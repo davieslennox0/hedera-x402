@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>hedera-x402 — live activity</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10151d;
+    --border: #1f2733;
+    --text: #e6edf3;
+    --dim: #7d8996;
+    --accent: #37d67a;
+    --accent-dim: #1f6b3f;
+    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    height: 100%;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--dim); font-weight: 400; }
+  .live {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(55, 214, 122, 0.6);
+    animation: pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(55, 214, 122, 0.55); }
+    70%  { box-shadow: 0 0 0 9px rgba(55, 214, 122, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(55, 214, 122, 0); }
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .stat .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat .value { font-family: var(--mono); font-size: 22px; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  thead th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--dim); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.new { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { background: rgba(55, 214, 122, 0.18); } 100% { background: transparent; } }
+  .tx { font-family: var(--mono); color: var(--text); text-decoration: none; }
+  .tx:hover { color: var(--accent); }
+  .amt { font-family: var(--mono); }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .empty { padding: 40px 14px; text-align: center; color: var(--dim); font-size: 13px; }
+  footer { margin-top: 16px; font-size: 11px; color: var(--dim); font-family: var(--mono); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>hedera&#8209;x402 <span>&mdash; live settlement activity</span></h1>
+      <div class="live"><span class="dot"></span> live</div>
+    </header>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Settled payments</div><div class="value" id="stat-count">0</div></div>
+      <div class="stat"><div class="label">Total volume</div><div class="value" id="stat-volume">0 ℏ</div></div>
+      <div class="stat"><div class="label">Last settlement</div><div class="value" id="stat-last">&mdash;</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Time</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <footer id="poll-status">polling /activity every 2.5s</footer>
+  </div>
+
+<script>
+  const ROWS = document.getElementById("rows");
+  const STAT_COUNT = document.getElementById("stat-count");
+  const STAT_VOLUME = document.getElementById("stat-volume");
+  const STAT_LAST = document.getElementById("stat-last");
+  const POLL_STATUS = document.getElementById("poll-status");
+
+  let knownTxIds = new Set();
+
+  function tinybarsToHbar(tinybars) {
+    const n = Number(tinybars);
+    if (!Number.isFinite(n)) return tinybars;
+    return (n / 1e8).toFixed(4) + " ℏ";
+  }
+
+  function timeAgo(iso) {
+    const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+    const s = Math.round(diff / 1000);
+    if (s < 5) return "just now";
+    if (s < 60) return s + "s ago";
+    return Math.round(s / 60) + "m ago";
+  }
+
+  function render(entries) {
+    if (entries.length === 0) {
+      ROWS.innerHTML = '<tr><td class="empty" colspan="5">Waiting for the first settled payment&hellip;</td></tr>';
+      STAT_COUNT.textContent = "0";
+      STAT_VOLUME.textContent = "0 ℏ";
+      STAT_LAST.textContent = "—";
+      return;
+    }
+
+    let totalTinybars = 0n;
+    ROWS.innerHTML = "";
+    for (const e of entries) {
+      totalTinybars += BigInt(e.amountTinybars === "unknown" ? 0 : e.amountTinybars);
+      const tr = document.createElement("tr");
+      if (!knownTxIds.has(e.txId)) tr.className = "new";
+      tr.innerHTML = `
+        <td>${timeAgo(e.timestamp)}</td>
+        <td><a class="tx" target="_blank" rel="noopener"
+              href="https://hashscan.io/testnet/transaction/${encodeURIComponent(e.txId)}">${e.txId}</a></td>
+        <td class="amt">${tinybarsToHbar(e.amountTinybars)}</td>
+        <td class="amt">${e.buyer ?? "—"}</td>
+        <td><span class="status">settled</span></td>
+      `;
+      ROWS.appendChild(tr);
+    }
+
+    knownTxIds = new Set(entries.map(e => e.txId));
+    STAT_COUNT.textContent = String(entries.length);
+    STAT_VOLUME.textContent = tinybarsToHbar(totalTinybars.toString());
+    STAT_LAST.textContent = timeAgo(entries[0].timestamp);
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch("/activity", { cache: "no-store" });
+      const entries = await res.json();
+      render(entries);
+      POLL_STATUS.textContent = "polling /activity every 2.5s — last update " + new Date().toLocaleTimeString();
+    } catch (err) {
+      POLL_STATUS.textContent = "polling /activity every 2.5s — fetch failed, retrying";
+    }
+  }
+
+  poll();
+  setInterval(poll, 2500);
+</script>
+</body>
+</html>

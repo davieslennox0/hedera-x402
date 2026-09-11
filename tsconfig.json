@@ -9,5 +9,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["server/**/*.ts", "client/**/*.ts", "scripts/**/*.ts"]
+  "include": ["server/**/*.ts", "client/**/*.ts", "scripts/**/*.ts", "agents/**/*.ts"]
 }

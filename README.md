@@ -83,6 +83,20 @@ This is a real run against Hedera testnet and Blocky402's testnet facilitator �
 
 Real settled transaction: **`0.0.7162784@1789074280.034424458`** — [HashScan testnet](https://hashscan.io/testnet/transaction/0.0.7162784@1789074280.034424458). Confirmed independently via the mirror node (`/api/v1/transactions/0.0.7162784-1789074280-034424458`): a `SUCCESS` `CRYPTOTRANSFER` moving exactly 5,000,000 tinybars from `0.0.10465813` to `0.0.10465844`, with `0.0.7162784` (Blocky402) paying the 266,026-tinybar network fee.
 
+## Live dashboard + continuous agents
+
+Beyond the one-shot `npm run client` walkthrough above, this repo also ships a live-updating view and two long-running processes for demo purposes — everything below is still real Hedera testnet activity, nothing mocked.
+
+- **`GET /dashboard`** — a single static page (`dashboard/index.html`, no build step, no framework) that polls `GET /activity` every 2.5s and renders a live table of settled payments (time, tx id linked to HashScan, amount, buyer), plus running totals.
+- **`GET /activity`** — recent settlements, newest first. Populated by a small `res.on("finish")` hook in `server/index.ts` that reads back the `PAYMENT-RESPONSE` header `paymentMiddleware` already attaches to a settled response (decoded via `@x402/core/http`'s `decodePaymentResponseHeader`) — it observes the existing verify/settle result rather than re-implementing any of it. Also mirrored to `activity.json` on disk so the log survives a server restart.
+- **`agents/buyer-agent.ts`** — loops forever (randomized 8–12s delay) making real paid requests against `/paid/quote`, using the same `buildPayingClient` the manual client uses. Each iteration is an independent, real settled Hedera testnet transaction.
+- **`agents/seller-monitor.ts`** — a read-only second process that polls `/activity` and logs a running revenue/count summary. It doesn't hold keys or transact; see below for why this repo ships one real paying agent plus one observer rather than two paying agents.
+- **`ecosystem.config.cjs`** — pm2 config for both. Run `pm2 start ecosystem.config.cjs && pm2 save`.
+
+**Why one buyer agent instead of two:** only one funded buyer testnet account exists in `.env` (`BUYER_ACCOUNT_ID`). A second real paying agent needs a second funded account, which is a human faucet-funding step (see Setup above) — rather than fake a second buyer's activity, this repo ships a genuinely read-only second process instead. Funding a second account and pointing a `buyer-agent-2.ts` at it (identical to `buyer-agent.ts` with different env vars) is a small, mechanical follow-up if two paying agents are wanted on camera.
+
+**Recording the demo:** `npm run record-demo` (`scripts/record-demo.mjs`) launches real Chromium under Xvfb (`xvfb-run`, since this box has no display server), navigates to `/dashboard`, records `RECORD_SECONDS` (default 60) of the live table updating via Playwright's own `recordVideo`, then navigates the same tab to HashScan testnet for the most recently settled tx as on-chain proof, and converts the resulting `.webm` to `.mp4` via system `ffmpeg` (**not** Playwright's own bundled `ffmpeg` — that copy is built with `--disable-everything` for Playwright's internal trace tooling only and has no `libx264`/mp4 support; `apt-get install ffmpeg` first). Assumes the server and both pm2 agents are already running. Output: `output/demo-raw.mp4`.
+
 ## Friction / notes for the Blocky402 / x402 team
 
 1. **`@hashgraph/sdk` is deprecated in favor of `@hiero-ledger/sdk`, and `@x402/hedera` only exposes the latter.** The task brief for this build (written from general x402 knowledge) assumed `@hashgraph/sdk`; the actual `@x402/hedera` package re-exports a pinned subset of `@hiero-ledger/sdk` instead, specifically to avoid a real footgun documented in its own README — installing `@hiero-ledger/sdk` directly *alongside* `@x402/hedera` in a workspace with independent installs causes its `instanceof`/string-brand checks to cross-fail at runtime (`t.startsWith is not a function`). This is good, deliberate design, but it means anyone starting from Hedera's older docs/tutorials (which still reference `@hashgraph/sdk`) will reach for the wrong package first. A note in the `@x402/hedera` README pointing this out explicitly (not just "we re-export the SDK") would save that detour.
@@ -91,7 +105,16 @@ Real settled transaction: **`0.0.7162784@1789074280.034424458`** — [HashScan t
 4. **The `exact` Hedera scheme spec doc's field names don't quite match the shipped TypeScript types.** `specs/schemes/exact/scheme_exact_hedera.md`'s `SettlementResponse` example uses `transactionId`; the actual `SettleResponse` type in `@x402/core`'s `types/facilitator.ts` calls that field `transaction`. Caught immediately by `tsc`, but it's the kind of spec/implementation drift that would bite anyone writing against the spec doc alone without also reading the source.
 5. **What worked well:** everything else matched documentation closely. `curl /supported` gave an immediately-actionable, self-describing response (network, scheme, feePayer) with no further digging needed. The whole client-side transaction construction/signing/base64-encoding — the part of this integration with the most room for subtle bugs — is fully owned by `createClientHederaSigner`; this repo's client code never touches `@hiero-ledger/sdk` directly at all. And the automatic `extra.feePayer` merge from the facilitator's `/supported` response into `PaymentRequirements` (`enhancePaymentRequirements` in `exact/server/scheme.ts`) meant the resource server never had to be told Blocky402's fee-payer account — it discovers it on every request.
 
-## Demo video shot list
+## Recorded demo
+
+`output/hedera-x402-demo.mp4` (89.7s, well under the 5-minute cap) — real Chromium recording of the live dashboard, captured via `npm run record-demo` while both pm2 agents made real Hedera testnet payments in the background:
+
+- **0:00–1:17** — `/dashboard` live, polling `/activity`, the settled-payments counter and table climbing in real time (23 → 100 settlements across the recording) as `hedera-buyer-agent` pays roughly every 8–12s. Every row is a real transaction id linking to HashScan.
+- **1:17–1:30** — same tab navigates to HashScan testnet for the most recently settled tx, showing `CRYPTO TRANSFER` / `SUCCESS` and the matching id from the dashboard row a moment earlier — independent on-chain confirmation, not just the dashboard's own claim.
+
+**Known cosmetic issue, left as-is rather than risk a re-record:** HashScan's cookie-consent dialog is visible over the transaction detail in the last ~8s — the transaction id, type, and status are still legible behind it, and `scripts/record-demo.mjs` does attempt to dismiss it (`page.getByRole("button", { name: /^accept$/i })`), but the click evidently doesn't land, most likely because the consent widget renders in an iframe or shadow root a plain `getByRole` can't reach. This box is memory-constrained (~1GB RAM, shared with several other long-running services) and two earlier recording attempts were OOM-killed outright, so a fourth Chromium launch purely to chase this cosmetic fix wasn't worth the risk to those other processes — the underlying proof (dashboard row ↔ HashScan tx id ↔ mirror-node confirmation in the README above) is unaffected either way.
+
+**Full shot list this recording followed** (for a from-scratch re-record, e.g. on a machine without this box's memory constraints):
 
 - 0:00–0:30 — what this is, one sentence
 - 0:30–1:30 — unpaid request, show the 402 response and its `accepts[]`
