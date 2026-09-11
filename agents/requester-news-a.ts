@@ -17,8 +17,8 @@ runRequesterLoop({
   label: "requester-news-a",
   endpoint: "/paid/research/news",
   buildBody: () => ({ topic: nextTopic() }),
-  minDelayMs: 14000,
-  maxDelayMs: 22000,
+  minDelayMs: 88000,
+  maxDelayMs: 98000,
   accountId: process.env.REQUESTER_2_ACCOUNT_ID,
   privateKey: process.env.REQUESTER_2_PRIVATE_KEY,
 });

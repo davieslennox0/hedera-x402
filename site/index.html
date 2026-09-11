@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Qorbit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -156,6 +157,19 @@
   }
   footer a { color: var(--ink-dim); }
   footer a:hover { color: var(--sun); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 0 20px; }
+    header.hero { padding: 56px 0 56px; }
+    h1.brand { font-size: clamp(38px, 12vw, 52px); }
+    .lede { font-size: 18px; }
+    section { padding: 52px 0; }
+    h2 { font-size: 26px; }
+    .flow-step { padding-left: 44px; }
+    .flow-line { left: 13px; }
+    .satellites { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 8px; }
+  }
 </style>
 </head>
 <body>

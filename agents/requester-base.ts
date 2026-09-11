@@ -36,8 +36,8 @@ export async function runRequesterLoop(cfg: RequesterConfig): Promise<void> {
   const buyerPrivateKey = cfg.privateKey || process.env.BUYER_PRIVATE_KEY;
   const usingOwnAccount = Boolean(cfg.accountId && cfg.privateKey);
   const baseUrl = process.env.RESOURCE_SERVER_URL ?? "http://localhost:4021";
-  const minDelay = cfg.minDelayMs ?? 12000;
-  const maxDelay = cfg.maxDelayMs ?? 20000;
+  const minDelay = cfg.minDelayMs ?? 80000;
+  const maxDelay = cfg.maxDelayMs ?? 100000;
 
   if (!buyerAccountId || !buyerPrivateKey) {
     console.error(`[${cfg.label}] Missing account credentials (own burner or BUYER_ACCOUNT_ID fallback)`);

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Qorbit — live activity</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,7 +58,11 @@
   .stat .value { font-family: var(--serif); font-weight: 500; font-size: 26px; margin-top: 6px; color: var(--ink); }
   .stat .value.accent { color: var(--sun); }
 
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .table-scroll {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  }
+  table { width: 100%; min-width: 640px; border-collapse: collapse; }
   thead th {
     text-align: left; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--ink-faint); font-weight: 500; padding: 12px 14px; border-bottom: 1px solid var(--border);
@@ -80,6 +85,15 @@
   footer { margin-top: 16px; font-size: 11px; color: var(--ink-faint); font-family: var(--mono); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   footer a { color: var(--ink-dim); }
   footer a:hover { color: var(--sun); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 24px 16px 40px; }
+    .title-block h1 { font-size: 21px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stats .stat:last-child { grid-column: span 2; }
+    .stat .value { font-size: 21px; }
+    footer { flex-direction: column; gap: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -98,12 +112,14 @@
       <div class="stat"><div class="label">Last settlement</div><div class="value" id="stat-last">&mdash;</div></div>
     </div>
 
-    <table>
-      <thead>
-        <tr><th>Time</th><th>Kind</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Kind</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
 
     <footer>
       <span id="poll-status">polling /activity every 2.5s</span>

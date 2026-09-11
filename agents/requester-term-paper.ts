@@ -26,6 +26,8 @@ runRequesterLoop({
   label: "requester-term-paper",
   endpoint: "/paid/research/term-paper",
   buildBody: () => ({ text: nextExcerpt() }),
+  minDelayMs: 85000,
+  maxDelayMs: 95000,
   accountId: process.env.REQUESTER_1_ACCOUNT_ID,
   privateKey: process.env.REQUESTER_1_PRIVATE_KEY,
 });
