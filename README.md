@@ -83,19 +83,32 @@ This is a real run against Hedera testnet and Blocky402's testnet facilitator �
 
 Real settled transaction: **`0.0.7162784@1789074280.034424458`** — [HashScan testnet](https://hashscan.io/testnet/transaction/0.0.7162784@1789074280.034424458). Confirmed independently via the mirror node (`/api/v1/transactions/0.0.7162784-1789074280-034424458`): a `SUCCESS` `CRYPTOTRANSFER` moving exactly 5,000,000 tinybars from `0.0.10465813` to `0.0.10465844`, with `0.0.7162784` (Blocky402) paying the 266,026-tinybar network fee.
 
-## Live dashboard + continuous agents
+## Landing page, dashboard, and four agents
 
-Beyond the one-shot `npm run client` walkthrough above, this repo also ships a live-updating view and two long-running processes for demo purposes — everything below is still real Hedera testnet activity, nothing mocked.
+Beyond the one-shot `npm run client` walkthrough above, this repo also ships an explainer landing page, a live-updating dashboard, and a four-agent demo — everything below is still real Hedera testnet activity, nothing mocked.
 
-- **`GET /dashboard`** — a single static page (`dashboard/index.html`, no build step, no framework) that polls `GET /activity` every 2.5s and renders a live table of settled payments (time, tx id linked to HashScan, amount, buyer), plus running totals.
-- **`GET /activity`** — recent settlements, newest first. Populated by a small `res.on("finish")` hook in `server/index.ts` that reads back the `PAYMENT-RESPONSE` header `paymentMiddleware` already attaches to a settled response (decoded via `@x402/core/http`'s `decodePaymentResponseHeader`) — it observes the existing verify/settle result rather than re-implementing any of it. Also mirrored to `activity.json` on disk so the log survives a server restart.
-- **`agents/buyer-agent.ts`** — loops forever (randomized 8–12s delay) making real paid requests against `/paid/quote`, using the same `buildPayingClient` the manual client uses. Each iteration is an independent, real settled Hedera testnet transaction.
-- **`agents/seller-monitor.ts`** — a read-only second process that polls `/activity` and logs a running revenue/count summary. It doesn't hold keys or transact; see below for why this repo ships one real paying agent plus one observer rather than two paying agents.
-- **`ecosystem.config.cjs`** — pm2 config for both. Run `pm2 start ecosystem.config.cjs && pm2 save`.
+- **`GET /`** — `site/index.html`, a static explainer page (no build step, no framework): what the system is, the request→402→pay→settle→deliver flow, and a card per agent.
+- **`GET /dashboard`** — `dashboard/index.html`, polls `GET /activity` every 2.5s and renders a live table of settled payments (time, **kind** — `term-paper` / `news` / `quote` — tx id linked to HashScan, amount, buyer), plus running totals.
+- **`GET /activity`** — recent settlements, newest first, same settlement-observer design as before (reads `paymentMiddleware`'s own `PAYMENT-RESPONSE` header via `@x402/core/http`, doesn't reimplement verify/settle). Now also carries `kind`, set by each research route handler via `res.locals.kind` before the response finishes.
 
-**Why one buyer agent instead of two:** only one funded buyer testnet account exists in `.env` (`BUYER_ACCOUNT_ID`). A second real paying agent needs a second funded account, which is a human faucet-funding step (see Setup above) — rather than fake a second buyer's activity, this repo ships a genuinely read-only second process instead. Funding a second account and pointing a `buyer-agent-2.ts` at it (identical to `buyer-agent.ts` with different env vars) is a small, mechanical follow-up if two paying agents are wanted on camera.
+**The four agents:**
 
-**Recording the demo:** `npm run record-demo` (`scripts/record-demo.mjs`) launches real Chromium under Xvfb (`xvfb-run`, since this box has no display server), navigates to `/dashboard`, records `RECORD_SECONDS` (default 60) of the live table updating via Playwright's own `recordVideo`, then navigates the same tab to HashScan testnet for the most recently settled tx as on-chain proof, and converts the resulting `.webm` to `.mp4` via system `ffmpeg` (**not** Playwright's own bundled `ffmpeg` — that copy is built with `--disable-everything` for Playwright's internal trace tooling only and has no `libx264`/mp4 support; `apt-get install ffmpeg` first). Assumes the server and both pm2 agents are already running. Output: `output/demo-raw.mp4`.
+1. **Base — the researcher** (`npm run server`, not a pm2 process — it's the resource server, run separately from the demo agents so it isn't torn down independently). Serves two real, Groq-generated deliverables behind x402 payment:
+   - `POST /paid/research/term-paper` — `{ text }` → feedback (strengths/weaknesses/next step) on a paper excerpt.
+   - `POST /paid/research/news` — `{ topic }` → a generated analysis of a topic (explicitly not a live news feed — see `server/index.ts`'s system prompt).
+   
+   **These routes are only mounted if `GROQ_API_KEY` is set at startup** (`server/groq.ts`). Since x402 settlement happens *before* the route handler runs (the facilitator settles real HBAR before `paymentMiddleware` calls through), there's no way to refund a request that then fails — so rather than charge for a broken endpoint, an unconfigured key means the route isn't registered at all and the request just 404s. Set the key and restart to enable them.
+2. **`agents/requester-term-paper.ts`** — loops (~12–20s), pays for term-paper feedback on a rotating pool of sample excerpts.
+3. **`agents/requester-news-a.ts`** — loops (~14–22s), pays for news analysis on rotating topic set A.
+4. **`agents/requester-news-b.ts`** — loops (~16–26s), pays for news analysis on rotating topic set B, independently of agent 3.
+
+All three requesters share `agents/requester-base.ts`'s loop (same `buildPayingClient`/spend-controls setup `client/index.ts` uses, just POSTing a JSON body instead of a bare GET — verified `@x402/fetch`'s `wrapFetchWithPayment` replays the body correctly on the paid retry via the standard `Request.clone()`). `ecosystem.config.cjs` runs all three under pm2: `pm2 start ecosystem.config.cjs && pm2 save`.
+
+**Why three requesters share one buyer account:** only one funded buyer testnet account exists in `.env` (`BUYER_ACCOUNT_ID`). A second/third real paying agent each needs its own funded account, which is a human faucet-funding step (see Setup above) — rather than fake separate buyers, all three requesters pay from the same account. Each payment is still an independent, real settled transaction; only the payer identity is shared. Funding two more accounts and pointing each requester at its own `BUYER_ACCOUNT_ID_2`/`_3` is a small, mechanical follow-up if distinct payer identities are wanted on camera.
+
+**Recording the demo:** `npm run record-demo` (`scripts/record-demo.mjs`) launches real Chromium under Xvfb (`xvfb-run`, since this box has no display server), navigates to `/dashboard`, records `RECORD_SECONDS` (default 60) of the live table updating via Playwright's own `recordVideo`, then navigates the same tab to HashScan testnet for the most recently settled tx as on-chain proof, and converts the resulting `.webm` to `.mp4` via system `ffmpeg` (**not** Playwright's own bundled `ffmpeg` — that copy is built with `--disable-everything` for Playwright's internal trace tooling only and has no `libx264`/mp4 support; `apt-get install ffmpeg` first). Assumes the server and pm2 agents are already running. Output: `output/demo-raw.mp4`.
+
+**Deploying at a real domain:** the landing page + dashboard are just what `npm run server` already serves — pointing a domain at it is a Caddy reverse-proxy to `localhost:4021` (see how `pitchook.xyz` is served elsewhere on this box for the pattern), once that domain's DNS A record actually resolves to this box's IP.
 
 ## Friction / notes for the Blocky402 / x402 team
 

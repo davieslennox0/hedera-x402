@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>hedera-x402</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10151d;
+    --border: #1f2733;
+    --text: #e6edf3;
+    --dim: #8b96a3;
+    --accent: #37d67a;
+    --accent2: #5b8cff;
+    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 80px; }
+  .kicker {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px;
+  }
+  h1 { font-size: 34px; margin: 0 0 10px; letter-spacing: -0.02em; }
+  .lede { color: var(--dim); font-size: 16px; line-height: 1.6; margin: 0 0 32px; max-width: 640px; }
+  .cta { display: flex; gap: 12px; margin-bottom: 56px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border);
+  }
+  .btn.primary { background: var(--accent); color: #06210f; border-color: var(--accent); }
+  .btn.secondary { color: var(--text); background: var(--panel); }
+  section { margin-bottom: 48px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin: 0 0 18px; }
+  p { line-height: 1.65; color: #c7d0da; }
+  .flow {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    font-family: var(--mono); font-size: 13px; margin: 18px 0;
+  }
+  .flow .step {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .flow .arrow { color: var(--dim); }
+  .agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .agent-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px;
+  }
+  .agent-card.base { border-color: var(--accent); }
+  .agent-card .role {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .agent-card.base .role { color: var(--accent); }
+  .agent-card:not(.base) .role { color: var(--accent2); }
+  .agent-card h3 { margin: 0 0 6px; font-size: 16px; }
+  .agent-card p { margin: 0; font-size: 13px; color: var(--dim); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .fact { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .fact .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+  .fact .value { font-family: var(--mono); font-size: 15px; margin-top: 6px; word-break: break-word; }
+  code { font-family: var(--mono); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.9em; }
+  footer { color: var(--dim); font-size: 13px; border-top: 1px solid var(--border); padding-top: 24px; }
+  footer a { color: var(--accent2); }
+  a { color: var(--accent2); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="kicker">Hedera testnet · x402 · Blocky402</div>
+    <h1>hedera&#8209;x402</h1>
+    <p class="lede">
+      A working x402 payment flow on Hedera testnet: a "researcher" agent sells generated
+      research on a per-request basis, three "requester" agents pay it in real HBAR for
+      real work, and every payment settles on-chain through the Blocky402 facilitator.
+      Nothing here is mocked — every transaction on the live dashboard is a real,
+      independently-verifiable Hedera testnet settlement.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="/dashboard">View live dashboard →</a>
+      <a class="btn secondary" href="https://github.com/davieslennox0/hedera-x402">GitHub repo</a>
+    </div>
+
+    <section>
+      <h2>How a payment happens</h2>
+      <div class="flow">
+        <span class="step">requester asks for research</span>
+        <span class="arrow">→</span>
+        <span class="step">402 Payment Required</span>
+        <span class="arrow">→</span>
+        <span class="step">requester signs a Hedera transfer</span>
+        <span class="arrow">→</span>
+        <span class="step">Blocky402 verifies + settles</span>
+        <span class="arrow">→</span>
+        <span class="step">researcher delivers the work</span>
+      </div>
+      <p>
+        This is the <code>exact</code> scheme of the x402 protocol on Hedera: the requester's
+        Hedera transfer transaction is signed but left partially unsigned (no fee-payer
+        signature); Blocky402 adds its own signature and submits it, paying the network fee
+        and sponsoring settlement. See the repo README for the full protocol trace and a
+        real settled transaction id.
+      </p>
+    </section>
+
+    <section>
+      <h2>Four agents</h2>
+      <div class="agents">
+        <div class="agent-card base">
+          <div class="role">Base — the seller</div>
+          <h3>Researcher</h3>
+          <p>The resource server itself. Gates two deliverables behind x402 payment and
+             generates each one for real on request — it doesn't serve canned responses.</p>
+        </div>
+        <div class="agent-card">
+          <div class="role">Requester</div>
+          <h3>Term-paper reviewer</h3>
+          <p>Pays for feedback on a paper excerpt: strengths, weaknesses, one concrete
+             next revision step.</p>
+        </div>
+        <div class="agent-card">
+          <div class="role">Requester</div>
+          <h3>News analyst A</h3>
+          <p>Pays for a balanced analysis of a rotating news topic.</p>
+        </div>
+        <div class="agent-card">
+          <div class="role">Requester</div>
+          <h3>News analyst B</h3>
+          <p>Same deliverable, different topic rotation — running independently so the
+             dashboard shows genuinely concurrent, independent paying agents.</p>
+        </div>
+      </div>
+      <p style="margin-top:16px;">
+        All three requesters currently share one funded Hedera testnet account (a second
+        real paying agent needs a second funded account — a manual faucet step). Each
+        payment is still an independent, real settled transaction.
+      </p>
+    </section>
+
+    <section>
+      <h2>What's real, what's not</h2>
+      <p>
+        Real: every Hedera testnet transaction, every HBAR transfer, every Blocky402
+        verify/settle call, every Groq-generated piece of feedback or analysis.<br/>
+        Not real-time: the news analyst's output is a generated analysis from a language
+        model, not a live news feed — it says so in its own output.
+      </p>
+    </section>
+
+    <footer>
+      Built for ETHOnline 2026 (Hedera track). <a href="https://github.com/davieslennox0/hedera-x402">Source on GitHub</a> ·
+      <a href="/dashboard">Live activity</a>
+    </footer>
+  </div>
+</body>
+</html>

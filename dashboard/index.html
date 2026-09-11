@@ -60,6 +60,10 @@
   .tx { font-family: var(--mono); color: var(--text); text-decoration: none; }
   .tx:hover { color: var(--accent); }
   .amt { font-family: var(--mono); }
+  .kind {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: #9db4ff;
+  }
   .status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--accent); }
   .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
   .empty { padding: 40px 14px; text-align: center; color: var(--dim); font-size: 13px; }
@@ -81,7 +85,7 @@
 
     <table>
       <thead>
-        <tr><th>Time</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
+        <tr><th>Time</th><th>Kind</th><th>Transaction</th><th>Amount</th><th>Buyer</th><th>Status</th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -114,7 +118,7 @@
 
   function render(entries) {
     if (entries.length === 0) {
-      ROWS.innerHTML = '<tr><td class="empty" colspan="5">Waiting for the first settled payment&hellip;</td></tr>';
+      ROWS.innerHTML = '<tr><td class="empty" colspan="6">Waiting for the first settled payment&hellip;</td></tr>';
       STAT_COUNT.textContent = "0";
       STAT_VOLUME.textContent = "0 ℏ";
       STAT_LAST.textContent = "—";
@@ -129,6 +133,7 @@
       if (!knownTxIds.has(e.txId)) tr.className = "new";
       tr.innerHTML = `
         <td>${timeAgo(e.timestamp)}</td>
+        <td class="kind">${e.kind ?? "quote"}</td>
         <td><a class="tx" target="_blank" rel="noopener"
               href="https://hashscan.io/testnet/transaction/${encodeURIComponent(e.txId)}">${e.txId}</a></td>
         <td class="amt">${tinybarsToHbar(e.amountTinybars)}</td>

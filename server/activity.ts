@@ -8,6 +8,10 @@ export type ActivityEntry = {
   buyer: string | undefined;
   seller: string;
   status: "settled";
+  // What was actually purchased — "term-paper" | "news" | undefined for the
+  // older generic /paid/quote route. Set via res.locals.kind by the route
+  // handler before the settlement-observer middleware's `finish` hook reads it.
+  kind?: string;
 };
 
 const MAX_ENTRIES = 100;
